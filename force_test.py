@@ -15,7 +15,7 @@ gravity = 9.8
 # ------------ CLASS ---------
 
 class box:
-    def __init__(self,mass,x,y,size,vx,vy):
+    def __init__(self,mass,x,y,size,vx,vy,color):
         self.mass = mass
         self.x = x
         self.y = y
@@ -24,6 +24,7 @@ class box:
         self.size = size
         self.vx = vx
         self.vy = vy
+        self.color = color
         self.Fx_total = 0
         self.Fy_total = 0
         self.on_ground = False
@@ -97,11 +98,11 @@ class box:
     def draw(self):
         box = pygame.Rect(0, 0, self.size, self.size)
         box.center = (self.x, self.y)
-        pygame.draw.rect(screen, (255, 100, 100), box)
+        pygame.draw.rect(screen, self.color, box)
 
         #gravity
         pygame.draw.line(screen,
-                (100,200,100),
+                (150,200,150),
                 (self.x,self.y),
                 (self.x + self.Fx_total ,self.y),
                 3
@@ -115,6 +116,22 @@ class box:
                 (self.x, self.y  + self.Fy_total ),
                 3
                 )
+    def x_collision(self,other):
+        distance = abs(self.x - other.x)
+
+        if distance < self.size/2 + other.size/2:
+            return True
+        else:
+            return False
+        
+    def y_collision(self,other):
+        distance = abs(self.y - other.y)
+
+        if distance < self.size/2 + other.size/2:
+            return True
+        else:
+            return False
+
 
 # ----------- FUNCTION ------------
 def draw_text(text, x, y):
@@ -125,9 +142,10 @@ def draw_text(text, x, y):
 running = True
 
 boxes = []
-box1 = box(10,100,300,100,50,0)
-box2 = box(10,400,300,100,0,0)
+box1 = box(10,100,300,100,50,0,(255,255,0))
+box2 = box(10,400,300,100,0,0,(255,255,255))
 boxes.append(box1)
+boxes.append(box2)
 
 while running:
     for event in pygame.event.get():
@@ -137,10 +155,36 @@ while running:
     screen.fill((190,220,255))
     dt = clock.tick(60) / 1000  # sekitar 0.0167 detik
 
-    for box in boxes:
+    for box in boxes:       #run box
         box.physic()
         pygame.draw.rect(screen, (75,255,75), (0,ground,800,600 - ground))
         box.draw()
+
+    for i in range(len(boxes)):
+        for j in range(i + 1, len(boxes)):
+            
+            box_1 = boxes[i]
+            box_2 = boxes[j]
+
+            if box1.x_collision(box_2) == True and box1.y_collision(box_2) == True:
+                box_1.color = (200,50,50)
+                box_2.color = (200,50,50)
+
+                if box1.x_collision(box_2) == True:
+                    vx1 = box_1.vx
+                    vx2 = box_2.vx
+
+                    box_1.vx = vx2
+                    box_2.vx = vx1
+
+                if box1.y_collision(box_2) == True:
+                    vy1 = box_1.vy
+                    vy2 = box_2.vy
+
+                    box_1.vy = vy2
+                    box_2.vy = vy1
+
+
 
     # ------ TEXTS ---------
     y_offset = 10
@@ -155,9 +199,9 @@ while running:
             " ":"",
             "ax": box.ax,
             "ay": box.ay,
-            "  ":"",
-            "Fx": box.Fx_total,
-            "Fy": box.Fy_total
+            #"  ":"",
+            #"x_collision":box.x_collision,
+            #"y_collision":box.y_collision
         }
 
         draw_text(f"Box {i}", 10, y_offset)
@@ -171,8 +215,12 @@ while running:
                 
             y_offset += 20
 
-        y_offset += 10 #gap
+        y_offset += 100 #gap
 
+    print(
+    box_1.x_collision(box_2),
+    box_1.y_collision(box_2)
+    )
 
     
     pygame.display.flip()
