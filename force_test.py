@@ -126,6 +126,7 @@ running = True
 
 boxes = []
 box1 = box(10,100,300,100,50,0)
+box2 = box(10,400,300,100,0,0)
 boxes.append(box1)
 
 while running:
