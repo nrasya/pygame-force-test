@@ -25,6 +25,7 @@ class box:
         self.vx = vx
         self.vy = vy
         self.color = color
+        self.default_color = color
         self.Fx_total = 0
         self.Fy_total = 0
         self.on_ground = False
@@ -142,10 +143,12 @@ def draw_text(text, x, y):
 running = True
 
 boxes = []
+
 box1 = box(10,100,300,100,50,0,(255,255,0))
 box2 = box(10,400,300,100,0,0,(255,255,255))
 boxes.append(box1)
 boxes.append(box2)
+
 
 while running:
     for event in pygame.event.get():
@@ -158,8 +161,9 @@ while running:
     for box in boxes:       #run box
         box.physic()
         pygame.draw.rect(screen, (75,255,75), (0,ground,800,600 - ground))
-        box.draw()
+        
 
+    
     for i in range(len(boxes)):
         for j in range(i + 1, len(boxes)):
             
@@ -217,10 +221,10 @@ while running:
 
         y_offset += 100 #gap
 
-    print(
-    box_1.x_collision(box_2),
-    box_1.y_collision(box_2)
-    )
+
+    for box in boxes:
+        box.draw()
+        box.color = box.default_color
 
     
     pygame.display.flip()
