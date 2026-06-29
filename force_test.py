@@ -1,18 +1,20 @@
 import pygame
 import math
 
+
+# --------- INITIALIZATION ---------
 pygame.init()
 font = pygame.font.SysFont(None, 24)
 screen = pygame.display.set_mode((800,600))
 clock = pygame.time.Clock()
+running = True
 
-
-
+# ------------ CONSTANT ----------
 ground = 500
 ground_friction = 2
 gravity = 9.8
 
-# ------------ CLASS ---------
+# ------------ CLASS ------------
 
 class box:
     def __init__(self,mass,x,y,size,vx,vy,color):
@@ -26,12 +28,14 @@ class box:
         self.vy = vy
         self.color = color
         self.default_color = color
+
+
+        self.on_ground = False
         self.Fx_total = 0
         self.Fy_total = 0
-        self.on_ground = False
         self.F_normal = 0.0
         self.F_airres = 2.0
-        self.F_friction = 0.0
+        self.F_ground_friction = 0.0
 
 
     def physic(self):
@@ -64,7 +68,7 @@ class box:
         else:
             F_friction = 0.0
 
-        self.F_friction = F_friction
+        self.F_ground_friction = F_friction
 
 
         # ----- Y FORCE ------
@@ -120,36 +124,39 @@ class box:
     def x_collision(self,other):
         distance = abs(self.x - other.x)
 
+
+
         if distance < self.size/2 + other.size/2:
             return True
         else:
             return False
         
     def y_collision(self,other):
-        distance = abs(self.y - other.y)
+        distance_y = abs(self.y - other.y)
+        distance_x = abs(self.x - other.x)
 
-        if distance < self.size/2 + other.size/2:
+        if distance_y < self.size/2 + other.size/2:
             return True
         else:
             return False
-
 
 # ----------- FUNCTION ------------
 def draw_text(text, x, y):
     surface = font.render(text, True, (0, 0, 0))
     screen.blit(surface, (x, y))
 
-    
-running = True
-
-boxes = []
-
-box1 = box(10,100,300,100,50,0,(255,255,0))
-box2 = box(10,400,300,100,0,0,(255,255,255))
-boxes.append(box1)
-boxes.append(box2)
 
 
+x_col = False
+y_col = False
+# ------------ OBJECT -----------
+boxes = [
+    box(10,100,100,100,50,0,(255,255,0)),
+    box(10,400,300,100,0,0,(255,255,255)),
+    box(10,700,300,100,0,0,(255,255,255))
+]
+
+# ------------ RUN -------------
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -170,26 +177,46 @@ while running:
             box_1 = boxes[i]
             box_2 = boxes[j]
 
-            if box1.x_collision(box_2) == True and box1.y_collision(box_2) == True:
+            if box_1.x_collision(box_2) == True and box_1.y_collision(box_2) == True:
                 box_1.color = (200,50,50)
                 box_2.color = (200,50,50)
 
-                if box1.x_collision(box_2) == True:
-                    vx1 = box_1.vx
-                    vx2 = box_2.vx
+                overlap_x = (box_1.size/2 + box_2.size/2) - abs(box_1.x - box_2.x)
+                overlap_y = (box_1.size/2 + box_2.size/2) - abs(box_1.y - box_2.y)
+                
 
-                    box_1.vx = vx2
-                    box_2.vx = vx1
+                if overlap_x < overlap_y:
 
-                if box1.y_collision(box_2) == True:
-                    vy1 = box_1.vy
-                    vy2 = box_2.vy
+                    correction = overlap_x / 2
 
-                    box_1.vy = vy2
-                    box_2.vy = vy1
+                    if box_1.x < box_2.x:
+                        box_1.x -= correction
+                        box_2.x += correction
+                    else:
+                        box_1.x += correction
+                        box_2.x -= correction
 
+                    J = -((1 + 1)*(box_2.vx - box_1.vx)) / ((1/box_1.mass)+(1/box_2.mass)) 
+                    box_1.vx = box_1.vx - J/box_1.mass 
+                    box_2.vx = box_2.vx + J/box_2.mass
+                    x_col = True
+                    y_col = False
+                else:
 
+                    correction = overlap_y / 2
 
+                    if box_1.y < box_2.y:
+                        box_1.y -= correction
+                        box_2.y += correction
+                    else:
+                        box_1.y += correction
+                        box_2.y -= correction
+
+                    Jy = -((1 + 1)*(box_2.vy - box_1.vy)) / ((1/box_1.mass)+(1/box_2.mass)) 
+                    box_1.vy = box_1.vy - Jy/box_1.mass 
+                    box_2.vy = box_2.vy + Jy/box_2.mass
+                    x_col = False
+                    y_col = True
     # ------ TEXTS ---------
     y_offset = 10
     for i, box in enumerate(boxes):
@@ -203,9 +230,9 @@ while running:
             " ":"",
             "ax": box.ax,
             "ay": box.ay,
-            #"  ":"",
-            #"x_collision":box.x_collision,
-            #"y_collision":box.y_collision
+            "  ":"",
+            "x_collision":x_col,
+            "y_collision":y_col
         }
 
         draw_text(f"Box {i}", 10, y_offset)
@@ -229,4 +256,5 @@ while running:
     
     pygame.display.flip()
 
+# ----------- QUIT -----------
 pygame.quit()
