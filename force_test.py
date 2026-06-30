@@ -10,18 +10,18 @@ clock = pygame.time.Clock()
 running = True
 
 # ------------ CONSTANT ----------
-ground = 500
 ground_friction = 2
 gravity = 9.8
 
 # ------------ CLASS ------------
 
 class box:
-    def __init__(self,mass,x,y,size,vx,vy,color):
+    def __init__(self,mass,x,y,size,vx,vy,color,static):
         self.mass = mass
         self.x = x
         self.y = y
         self.size = size
+        self.width, self.height = self.size
         self.vx = vx
         self.vy = vy
 
@@ -35,19 +35,24 @@ class box:
         self.on_ground = False
         self.prev_on_ground = False
 
+        self.static = static
+
+        self.Fx_var = []
+        self.Fy_var = []
         self.Fx_total = 0
         self.Fy_total = 0
 
 
     def physic(self):
-        self.ax = self.Fx_total / self.mass
-        self.ay = self.Fy_total / self.mass
+        if not self.static:
+            self.ax = self.Fx_total / self.mass
+            self.ay = self.Fy_total / self.mass
 
-        self.vx += self.ax * dt
-        self.vy += self.ay * dt
+            self.vx += self.ax * dt
+            self.vy += self.ay * dt
 
-        self.x += self.vx * dt
-        self.y += self.vy * dt
+            self.x += self.vx * dt
+            self.y += self.vy * dt
 
     def add_force(self,force,degree):
 
@@ -60,7 +65,7 @@ class box:
         self.Fy_total -= force * math.sin(degree)
 
     def draw(self):
-        box = pygame.Rect(0, 0, self.size, self.size)
+        box = pygame.Rect(0, 0, self.width, self.height)
         box.center = (self.x, self.y)
         pygame.draw.rect(screen, self.color, box)
 
@@ -80,19 +85,15 @@ class box:
         
     def x_collision(self,other):
         distance = abs(self.x - other.x)
-
-
-
-        if distance < self.size/2 + other.size/2:
+        if distance < self.width/2 + other.width/2:
             return True
         else:
             return False
         
     def y_collision(self,other):
         distance_y = abs(self.y - other.y)
-        distance_x = abs(self.x - other.x)
 
-        if distance_y < self.size/2 + other.size/2:
+        if distance_y < self.height/2 + other.height/2:
             return True
         else:
             return False
@@ -103,14 +104,14 @@ def draw_text(text, x, y):
     screen.blit(surface, (x, y))
 
 
-
-x_col = False
-y_col = False
 # ------------ OBJECT -----------
 boxes = [
-    box(10,100,100,100,50,0,(255,255,0)),
-    box(10,400,300,100,0,0,(255,255,255))
+    box(100,400,550,(800,100),0,0,(75,255,75),True),
+    box(10,100,100,(100,100),30,0,(255,255,0),False),
+    box(10,400,100,(100,100),0,0,(255,255,255),False)
 ]
+
+#add initial force
 for box in boxes:
     box.add_force(gravity * box.mass,3.14/2
     )
@@ -126,66 +127,59 @@ while running:
 
     for box in boxes:       
         box.physic()
-        pygame.draw.rect(screen, (75,255,75), (0,ground,800,600 - ground))
-
-        ground_relative = ground - box.size/2
-
-        #Ground Collisison
-        if box.y > ground_relative:
-            box.on_ground = True
-            box.vy = 0
-        else:
-            box.on_ground = False
-
-        #Ground Logic
-        if box.on_ground != box.prev_on_ground:
-
-            if box.on_ground:
-                box.add_force(gravity * box.mass, 3.14 * 3/2)
-
-        box.prev_on_ground = box.on_ground
-
-        #
-            
 
     
     for i in range(len(boxes)):
         for j in range(i + 1, len(boxes)):
             
-            box_1 = boxes[i]
-            box_2 = boxes[j]
+            box1 = boxes[i]
+            box2 = boxes[j]
 
-            x_distance = abs(box_1.x - box_2.x)
-            y_distance = abs(box_1.y - box_2.y)
+            if box1.x_collision(box2) and box1.y_collision(box2):
 
-            x_collideDistance = box_1.size/2 - box_2.size/2
-            y_collideDistance = box_1.size/2 - box_2.size/2
+                distance_x = abs(box1.x - box2.x)
+                distance_y = abs(box1.y - box2.y)
 
-            x_overlap = x_distance - x_collideDistance
-            y_overlap = y_distance - y_collideDistance
+                overlap_x = box1.width/2 + box2.width/2 - distance_x
+                overlap_y = box1.height/2 + box2.height/2 - distance_y
 
-            if x_distance < x_collideDistance and y_distance < y_collideDistance: #overlapping on both axis
-                if x_overlap < y_overlap:
+                if overlap_x < overlap_y: # overlapping ---> contact
+                    #x axis
+                    vx_relative = box1.vx - box2.vx
+                    if abs(vx_relative) > 0:
+                        if box1.vx > 0:
+                            box1.x -= overlap_x + overlap_x/100
+                        else:
+                            box1.x += overlap_x + overlap_x/100
                     
-                    #correction
-                    correction = x_overlap/2
-                    if box_1.x < box_2.x:       
-                        box_1.x -= correction
-                        box_2.x += correction
-                    else:
-                        box_1.x += correction
-                        box_2.x -= correction
+                    J = -((1 + 1)*(box2.vx - box1.vx)) / ((1/box1.mass)+(1/box2.mass)) 
+                    if not box1.static:
+                        box1.vx = box1.vx - J/box1.mass 
+                        box1.add_force(box2.Fx_total,0)
+
+                    if not box2.static:
+                        box2.vx = box2.vx + J/box2.mass
+                        box2.add_force(box1.Fx_total,0)
+
+
+                    
 
                 else:
-                    correction = y_overlap/2
-                    if box_1.y < box_2.y:       
-                        box_1.y -= correction
-                        box_2.y += correction
-                    else:
-                        box_1.y += correction
-                        box_2.y -= correction
+                    #y axis
+                    vy_relative = box1.vy - box2.vy
+                    if abs(vy_relative) < 1:
+                        if box1.vy > 0: 
+                            box1.y -= overlap_y + overlap_y/100
+                        else:
+                            box1.y += overlap_y + overlap_y/100
 
-
+                    J = -((1 + 1)*(box2.vy - box1.vy)) / ((1/box1.mass)+(1/box2.mass)) 
+                    if not box1.static: 
+                        box1.vy = box1.vy - J/box1.mass
+                        
+                    if not box2.static:
+                        box2.vy = box2.vy + J/box2.mass
+                
 
 
 
